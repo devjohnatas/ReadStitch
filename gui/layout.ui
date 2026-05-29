@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <ui version="4.0">
  <class>ReadStitchWindow</class>
  <widget class="QMainWindow" name="ReadStitchWindow">
@@ -38,7 +38,7 @@
       </property>
       <widget class="QWidget" name="mainTab">
        <attribute name="title">
-        <string>Basic</string>
+        <string>Básico</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <property name="leftMargin">
@@ -56,7 +56,7 @@
         <item>
          <widget class="QGroupBox" name="browseGroupBox">
           <property name="title">
-           <string>Input/Output Settings</string>
+           <string>Configurações de Entrada/Saída</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <property name="spacing">
@@ -77,19 +77,19 @@
            <item>
             <widget class="QLabel" name="inputLabel">
              <property name="text">
-              <string>Input Path</string>
+              <string>Caminho de Entrada</string>
              </property>
             </widget>
            </item>
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout" stretch="3,1">
              <item>
-              <widget class="QLineEdit" name="inputField"/>
+              <widget class="QLineEdit" name="inputField" />
              </item>
              <item>
               <widget class="QPushButton" name="browseButton">
                <property name="text">
-                <string>Browse</string>
+                <string>Procurar</string>
                </property>
               </widget>
              </item>
@@ -101,7 +101,7 @@
         <item>
          <widget class="QGroupBox" name="generalGroupBox">
           <property name="title">
-           <string>General Settings</string>
+           <string>Configurações Gerais</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <property name="spacing">
@@ -127,14 +127,14 @@
              <item>
               <widget class="QPushButton" name="typeButton">
                <property name="text">
-                <string>Type (WEBP)</string>
+                <string>Tipo (WEBP)</string>
                </property>
               </widget>
              </item>
              <item>
               <widget class="QPushButton" name="redrawButton">
                <property name="text">
-                <string>Redraw (JPG)</string>
+                <string>Redesenhar (JPG)</string>
                </property>
               </widget>
              </item>
@@ -143,7 +143,7 @@
            <item>
             <widget class="QLabel" name="heightLabel">
              <property name="text">
-              <string>Rough Output Height</string>
+              <string>Altura Aproximada da Saída</string>
              </property>
             </widget>
            </item>
@@ -177,7 +177,7 @@
       </widget>
       <widget class="QWidget" name="postProcessTab">
        <attribute name="title">
-        <string>Post Process</string>
+        <string>Pós-processamento</string>
        </attribute>
        <layout class="QVBoxLayout" name="postProcessVerticalLayout">
         <property name="leftMargin">
@@ -195,7 +195,7 @@
         <item>
          <widget class="QGroupBox" name="postProcessGroupBox">
           <property name="title">
-           <string>Post Process Settings</string>
+           <string>Config. Pós-processamento</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_7">
            <property name="spacing">
@@ -307,7 +307,7 @@
       </widget>
       <widget class="QWidget" name="watermarkTab">
        <attribute name="title">
-        <string>Watermark</string>
+        <string>Marca d'água</string>
        </attribute>
        <layout class="QVBoxLayout" name="watermarkVerticalLayout">
         <property name="leftMargin">
@@ -622,7 +622,7 @@ Exemplo: Se a marca d'água tem 150px e este valor é 400px, só áreas uniforme
         <item>
          <widget class="QGroupBox" name="watermarkHeaderFooterGroupBox">
           <property name="title">
-           <string>Header / Footer</string>
+           <string>Cabeçalho / Rodapé</string>
           </property>
           <layout class="QVBoxLayout" name="wmHFLayout">
            <property name="spacing">
@@ -708,12 +708,70 @@ Exemplo: Se a marca d'água tem 150px e este valor é 400px, só áreas uniforme
         </item>
        </layout>
       </widget>
-     </widget>
+     <widget class="QWidget" name="downloaderTab">
+       <attribute name="title">
+        <string>Baixador</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="downloaderVerticalLayout">
+        <property name="leftMargin"><number>6</number></property>
+        <property name="topMargin"><number>6</number></property>
+        <property name="rightMargin"><number>6</number></property>
+        <property name="bottomMargin"><number>6</number></property>
+        <item>
+         <widget class="QGroupBox" name="downloaderGroupBox">
+          <property name="title">
+           <string>Baixador de Mangás</string>
+          </property>
+          <layout class="QVBoxLayout" name="downloaderLayout">
+           <item>
+            <layout class="QHBoxLayout" name="dlInputLayout">
+             <item>
+              <widget class="QLineEdit" name="dlUrlField">
+               <property name="placeholderText"><string>https://asurascans.com/comics/...</string></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="dlFetchButton">
+               <property name="text"><string>Buscar Capítulos</string></property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="dlDirLayout">
+             <item>
+              <widget class="QLineEdit" name="dlDirField">
+               <property name="placeholderText"><string>Pasta de Downloads</string></property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="dlDirBrowseButton">
+               <property name="text"><string>...</string></property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <widget class="QListWidget" name="dlChapterList">
+             <property name="selectionMode"><enum>QAbstractItemView::MultiSelection</enum></property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="dlDownloadButton">
+             <property name="text"><string>Baixar Capítulos Selecionados</string></property>
+             <property name="enabled"><bool>false</bool></property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget></widget>
     </item>
     <item>
      <widget class="QGroupBox" name="ActionGroupBox">
       <property name="title">
-       <string>Current Status</string>
+       <string>Status Atual</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <property name="spacing">
@@ -758,7 +816,7 @@ Exemplo: Se a marca d'água tem 150px e este valor é 400px, só áreas uniforme
          <item>
           <widget class="QPushButton" name="startProcessButton">
            <property name="text">
-            <string>Start Process</string>
+            <string>Iniciar Processo</string>
            </property>
            <property name="default">
             <bool>false</bool>
@@ -786,6 +844,6 @@ Exemplo: Se a marca d'água tem 150px e este valor é 400px, só áreas uniforme
    </layout>
   </widget>
  </widget>
- <resources/>
- <connections/>
+ <resources />
+ <connections />
 </ui>

@@ -63,8 +63,8 @@ APP_VERSION = _load_app_version()
 GITHUB_REPO = "devjohnatas/ReadStitch"
 GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
 GITHUB_API_LATEST_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
-AUTO_CHECK_UPDATES_ON_STARTUP = False
-AUTO_UPDATE_ON_STARTUP = False
+AUTO_CHECK_UPDATES_ON_STARTUP = True
+AUTO_UPDATE_ON_STARTUP = True
 
 
 _CONTEXT_MENU_GUI = os.path.join(_PROJECT_ROOT, "ReadStitchGUI.py")
@@ -182,7 +182,19 @@ def initialize_gui(
     pixmap = QPixmap()
     pixmap.loadFromData(icon)
     _main_window.setWindowIcon(QIcon(pixmap))
-    _main_window.setWindowTitle(f"{APP_NAME} By {APP_VENDOR} [{APP_VERSION}]")
+    _main_window.setWindowTitle(f"{APP_NAME} v{APP_VERSION}")
+    
+    import sys
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            hwnd = int(_main_window.winId())
+            value = ctypes.c_int(1)
+            # 20 for Windows 11, 19 for Windows 10
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 20, ctypes.byref(value), ctypes.sizeof(value))
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(hwnd, 19, ctypes.byref(value), ctypes.sizeof(value))
+        except Exception:
+            pass
 
     _on_load()
     _bind_signals()
@@ -190,6 +202,10 @@ def initialize_gui(
     _folder_drop_filter = FolderDropFilter(_main_window)
     _main_window.inputField.setAcceptDrops(True)
     _main_window.inputField.installEventFilter(_folder_drop_filter)
+
+    # Initialize Downloader Tab
+    from gui.downloader_tab import setup_downloader_tab
+    setup_downloader_tab(_main_window, _settings)
 
     _process_thread = ProcessThread(_main_window)
     _process_thread.progress.connect(_update_progress)
@@ -293,8 +309,7 @@ def _maybe_auto_close() -> None:
 
 
 def _startup_update_check() -> None:
-    # Startup check intentionally disabled: updates are manual via button.
-    return
+    _check_for_updates(silent_if_latest=True, auto_update=AUTO_UPDATE_ON_STARTUP)
 
 
 def _is_any_watermark_enabled() -> bool:
@@ -375,7 +390,7 @@ def _toggle_footer_options(enabled: bool) -> None:
 
 
 def _on_load() -> None:
-    _main_window.statusField.setText("Idle")
+    _main_window.statusField.setText("Aguardando...")
     _main_window.statusProgressBar.setValue(0)
     _main_window.heightField.setValue(_settings.load("split_height"))
     _main_window.runProcessCheckbox.setChecked(_settings.load("run_postprocess"))
@@ -695,8 +710,8 @@ def _install_context_menu() -> None:
 
         QMessageBox.information(
             _main_window,
-            APP_NAME,
-            "Menu de contexto instalado!\n\n"
+            "Sucesso",
+            "O menu de contexto foi instalado com sucesso!\n\n"
             "Clique com o botão direito em uma pasta para ver as opções.",
         )
     except Exception as exc:
@@ -958,6 +973,38 @@ def _self_update_from_release(release_data: dict) -> tuple[bool, str]:
 
 
 def _check_for_updates(*, silent_if_latest: bool = False, auto_update: bool = False) -> None:
+    if not _is_frozen() and os.path.isdir(os.path.join(_PROJECT_ROOT, ".git")):
+        try:
+            subprocess.check_call(["git", "fetch"], cwd=_PROJECT_ROOT, timeout=10, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            local_hash = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=_PROJECT_ROOT, text=True).strip()
+            upstream_hash = subprocess.check_output(["git", "rev-parse", "@{u}"], cwd=_PROJECT_ROOT, text=True).strip()
+            
+            if local_hash != upstream_hash:
+                if auto_update:
+                    subprocess.check_call(["git", "reset", "--hard", "HEAD"], cwd=_PROJECT_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.check_call(["git", "pull"], cwd=_PROJECT_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                else:
+                    reply = QMessageBox.question(
+                        _main_window,
+                        "Nova Atualização do Git",
+                        "Há uma nova atualização no repositório. Deseja forçar a atualização e reiniciar agora?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                    )
+                    if reply == QMessageBox.StandardButton.Yes:
+                        subprocess.check_call(["git", "reset", "--hard", "HEAD"], cwd=_PROJECT_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        subprocess.check_call(["git", "pull"], cwd=_PROJECT_ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        os.execv(sys.executable, [sys.executable] + sys.argv)
+                return
+            else:
+                if not silent_if_latest:
+                    QMessageBox.information(_main_window, "Atualização", "O projeto já está na versão mais recente do Git.")
+                return
+        except Exception as e:
+            if not silent_if_latest:
+                QMessageBox.warning(_main_window, "Erro", f"Erro ao verificar atualizações do Git:\n{e}")
+            return
+
     try:
         latest_release = _fetch_latest_release()
     except Exception:
@@ -965,8 +1012,8 @@ def _check_for_updates(*, silent_if_latest: bool = False, auto_update: bool = Fa
             return
         QMessageBox.warning(
             _main_window,
-            "Atualizacao",
-            "Nao foi possivel verificar atualizacoes agora.",
+            "Aviso",
+            "Não foi possível verificar atualizações agora.",
         )
         return
 
@@ -975,22 +1022,31 @@ def _check_for_updates(*, silent_if_latest: bool = False, auto_update: bool = Fa
     latest_url = str(latest_release.get("html_url") or GITHUB_RELEASES_URL)
 
     if _version_tuple(latest_tag) > _version_tuple(APP_VERSION):
-        QMessageBox.information(
+        if auto_update and _is_frozen():
+            _self_update_from_release(latest_release)
+            return
+
+        reply = QMessageBox.question(
             _main_window,
-            "Atualizacao disponivel",
-            "Nova versao encontrada!\n\n"
-            f"Atual: {APP_VERSION}\n"
-            f"Disponivel: {latest_tag or latest_name}\n\n"
-            "A pagina de releases sera aberta para baixar e instalar manualmente.",
+            "Nova Atualização Disponível!",
+            f"Uma nova versão ({latest_tag or latest_name}) está disponível.\n"
+            "Deseja atualizar agora?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        try:
-            webbrowser.open(latest_url, new=2)
-        except Exception:
-            QMessageBox.warning(
-                _main_window,
-                "Atualizacao",
-                f"Nao foi possivel abrir o navegador.\nAcesse manualmente:\n{latest_url}",
-            )
+        if reply == QMessageBox.StandardButton.Yes:
+            if _is_frozen():
+                success, msg = _self_update_from_release(latest_release)
+                if not success:
+                    QMessageBox.warning(_main_window, "Aviso", msg)
+            else:
+                try:
+                    webbrowser.open(latest_url, new=2)
+                except Exception:
+                    QMessageBox.warning(
+                        _main_window,
+                        "Aviso",
+                        f"Não foi possível abrir o navegador.\nAcesse manualmente:\n{latest_url}",
+                    )
         return
 
     if silent_if_latest:
@@ -998,8 +1054,8 @@ def _check_for_updates(*, silent_if_latest: bool = False, auto_update: bool = Fa
 
     QMessageBox.information(
         _main_window,
-        "Atualizacao",
-        f"Voce ja esta na versao mais recente ({APP_VERSION}).",
+        "Atualização",
+        f"Você já está na versão mais recente ({APP_VERSION}).",
     )
 
 

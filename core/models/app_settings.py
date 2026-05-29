@@ -31,6 +31,7 @@ class AppSettings:
     run_comiczip: bool = False
     parallel_processing: bool = True
     last_browse_location: str = ""
+    download_dir: str = "C:/Manhwa/Downloads"
 
     # Watermark Settings - Fullpage
     watermark_fullpage_enabled: bool = False

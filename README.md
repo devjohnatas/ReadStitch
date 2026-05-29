@@ -4,7 +4,7 @@
   </a>
 
   <h1>ReadStitch</h1>
-  <p><strong>Stitch + Slice para webtoon/manhwa/manhua</strong><br/>Rápido, estável e pronto para fluxo de edição.</p>
+  <p><strong>A fusão perfeita entre SmartStitch e Waifu2X</strong><br/>Baixe capítulos, processe com qualidade superior e tenha a melhor experiência de leitura.</p>
 
   <p>
     <a href="https://github.com/devjohnatas/ReadStitch/releases/latest"><img src="https://img.shields.io/github/v/release/devjohnatas/ReadStitch?label=release" alt="Latest Release"></a>
@@ -17,175 +17,65 @@
 
 ---
 
-## O que o ReadStitch faz
+## 📖 O que é o ReadStitch?
 
-ReadStitch junta múltiplas imagens em páginas longas e depois corta em painéis de leitura.
+O **ReadStitch** nasceu da junção do poder de corte inteligente do **SmartStitch** com a melhoria de imagem do **Waifu2X**. 
 
-Objetivos do projeto:
-- Preservar qualidade visual.
-- Evitar cortes ruins em texto e arte.
-- Manter fluxo simples para produção.
-- Atender GUI e CLI.
+Os usuários podem baixar capítulos diretamente de diversos sites (como plataformas de webtoons e mangás) e optar por lê-los normalmente, ou passá-los pelo **ReadStitch** para:
+- **Juntar e Fatiar (Stitch + Slice)**: Múltiplas imagens curtas são unidas e depois cortadas perfeitamente para uma leitura vertical suave e sem quebras grotescas de arte.
+- **Upscaling Inteligente**: Integrado com o Waifu2X para remover ruídos e aumentar significativamente a resolução dos painéis.
 
-## Destaques
+### 🎯 Principais Funcionalidades
 
-### Interface GUI
-- Stitch/slice por pasta.
-- Detectores:
-  - Pixel comparison (smart).
-  - Direct slicing.
-- Formatos de saída: .png, .jpg, .webp, .bmp, .psd, .tiff, .tga.
-- Enforce de largura: none, automático, customizado.
-- Perfis e persistência de configurações.
-- Pós-processamento com placeholders [stitched] e [processed].
-- Integração opcional com ComicZip.
-- Menu de contexto no Windows.
-- Checagem de update e auto-update para app compilado.
-
-### Sistema de Watermark
-- Fullpage watermark em blocos uniformes.
-- Overlay watermark com posição/opacidade/escala.
-- Inserção de header e footer.
-- Toggle rápido via menu de contexto.
-
-### Console (CLI)
-- Pipeline para batch/headless.
-- Opções principais de detector/corte via argumentos.
+- **Processamento em Massa**: Processe pastas inteiras de uma vez de forma super simples.
+- **Detecção Inteligente**:
+  - Comparação de pixels avançada para detectar bordas e não cortar balões de texto.
+  - Slicing direto com configurações de tolerância.
+- **Formatos Suportados**: Exportação flexível para `.png, .jpg, .webp, .bmp, .psd, .tiff, .tga`.
+- **Watermark e Assinatura**:
+  - Inserção de overlay, header (cabeçalho) e footer (rodapé).
+- **Menu de Contexto no Windows**: Clique direito em qualquer pasta do seu computador e processe tudo instantaneamente!
+- **Auto-Update**: O programa sincroniza automaticamente as atualizações direto do Git e realiza a atualização forçada de forma transparente para manter todos sempre na melhor versão.
 
 ---
 
-## Começando rápido
+## 🚀 Como Começar
 
-### Windows (release)
-1. Baixe a versão mais recente em Releases.
-2. Extraia o pacote.
-3. Execute ReadStitch.exe.
-4. Escolha a pasta de entrada.
-5. Ajuste detector/saída.
-6. Inicie o processamento.
+### Usuários Comuns (Interface Visual)
+1. Acesse a página de [Releases](https://github.com/devjohnatas/ReadStitch/releases) e baixe a versão mais recente.
+2. Extraia o pacote em seu computador e execute o `ReadStitch.exe`.
+3. Escolha a pasta onde você baixou os capítulos.
+4. Ajuste os formatos de saída e, se desejar, ative a opção do *Waifu2X* para melhoria gráfica.
+5. Clique em processar!
 
-### Rodando via código-fonte
-1. Instale Python 3.11+.
-2. Instale dependências.
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Rode GUI.
-
-```bash
-python ReadStitchGUI.py
-```
-
-4. Ou rode CLI.
-
-```bash
-python ReadStitchConsole.py -i "./chapter" -sh 7500 -t .png
-```
+### Desenvolvedores (Rodando via Código-fonte)
+1. Instale o Python 3.11+.
+2. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Execute a interface ou o console:
+   ```bash
+   # Para a interface gráfica:
+   python ReadStitchGUI.py
+   
+   # Ou pelo console:
+   python ReadStitchConsole.py -i "./chapter" -sh 7500 -t .png
+   ```
 
 ---
 
-## CLI (resumo)
+## 🤝 Como Contribuir
 
-```text
-python ReadStitchConsole.py [-h] -i INPUT_FOLDER -sh SPLIT_HEIGHT
-                             [-t {.png,.jpg,.webp,.bmp,.psd,.tiff,.tga}]
-                             [-cw CUSTOM_WIDTH]
-                             [-dt {none,pixel}]
-                             [-s [0-100]]
-                             [-lq [1-100]]
-                             [-ip IGNORABLE_PIXELS]
-                             [-sl [1-100]]
-```
+O **ReadStitch** é um projeto focado na comunidade. **Os usuários podem e são extremamente encorajados a ajudar no projeto!**
+Veja como você pode contribuir:
+- **Reportando Bugs (Issues)**: Encontrou algum erro? Abra uma [Issue](https://github.com/devjohnatas/ReadStitch/issues) detalhando o problema. Forneça os passos para reproduzir e os logs gerados na pasta `__logs__`.
+- **Sugerindo Melhorias**: Quer que a gente suporte outro formato ou ferramenta? Nos avise pelas Issues.
+- **Enviando Código (Pull Requests)**: Se você é dev, sinta-se livre para implementar correções, criar novas funcionalidades e abrir um *Pull Request (PR)*!
 
 ---
 
-## Build local
+## 📄 Licença
 
-```bash
-python -m scripts.build
-```
-
-Saída esperada:
-- dist/ReadStitch/ReadStitch.exe
-
----
-
-## Atualização automática no app
-
-Endpoint usado:
-- https://api.github.com/repos/devjohnatas/ReadStitch/releases/latest
-
-Comportamento:
-- Compara versão local com tag da release.
-- Se houver versão mais nova, o app compilado pode baixar ZIP, aplicar update e reiniciar.
-
-Requisitos:
-- Tags no formato vX.Y.Z.
-- Release com asset .zip.
-
----
-
-## Pipeline GitHub Actions
-
-Workflows:
-- .github/workflows/ci.yml
-- .github/workflows/auto-tag.yml
-- .github/workflows/build.yml
-
-Fluxo:
-1. Push em dev/main dispara CI (build de validação).
-2. Se o título do commit tiver versão semântica, auto-tag cria vX.Y.Z.
-3. Auto-tag dispara workflow de release.
-4. Release workflow compila + publica a release com ZIP.
-
-Nome do asset:
-- ReadStitch-vX.Y.Z-windows.zip
-
-Exemplo de deploy:
-
-```bash
-git commit -m "3.2.0"
-git push origin main
-```
-
----
-
-## Estrutura do projeto
-
-- gui/: interface, controller e orquestração.
-- console/: launcher e fluxo CLI.
-- core/detectors/: detectores de corte.
-- core/services/: image IO, manipulação, watermark, postprocess, settings.
-- core/models/: modelos de configuração e work directory.
-- scripts/: build e utilitários.
-
----
-
-## Troubleshooting
-
-- Menu de contexto duplicado:
-  - Remova pelo app.
-  - Instale novamente.
-- Update não encontrado:
-  - Verifique internet/acesso ao GitHub.
-  - Confirme tag válida e ZIP na release.
-- Pós-processamento falhando:
-  - Verifique caminho do executável e argumentos.
-
----
-
-## Reportando problemas
-
-Ao abrir issue, inclua:
-- Passos executados.
-- Comportamento esperado vs atual.
-- Logs da pasta __logs__.
-- Comando ou configuração usada.
-
----
-
-## Licença
-
-Projeto distribuído sob os termos do arquivo LICENSE.
+O ReadStitch é totalmente **Open-Source** e distribuído sob os termos do arquivo [LICENSE](LICENSE).
+Sinta-se livre para usar, modificar e distribuir o código de acordo com as regras estabelecidas.
