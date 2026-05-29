@@ -441,6 +441,7 @@ def _bind_signals() -> None:
     )
     w.installWaifu2xButton.clicked.connect(lambda: _waifu2x_action(repair=False))
     w.repairWaifu2xButton.clicked.connect(lambda: _waifu2x_action(repair=True))
+    w.installPlaywrightButton.clicked.connect(_install_playwright_action)
     w.installContextMenuButton.clicked.connect(_install_context_menu)
     w.removeContextMenuButton.clicked.connect(_remove_context_menu)
     w.typeButton.clicked.connect(_apply_type_preset)
@@ -612,6 +613,18 @@ def _waifu2x_action(*, repair: bool) -> None:
     except Exception:
         action = "reparar" if repair else "instalar"
         QMessageBox.critical(_main_window, "Waifu2X", f"Falha ao {action}")
+
+
+def _install_playwright_action() -> None:
+    QMessageBox.information(_main_window, "Playwright", "O download do navegador interno pode demorar alguns minutos. A interface vai travar durante o processo.\nPor favor, aguarde o aviso de conclusão!")
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        )
+        QMessageBox.information(_main_window, "Playwright", "Dependências do baixador instaladas com sucesso!")
+    except Exception as exc:
+        QMessageBox.critical(_main_window, "Playwright", f"Falha ao instalar dependências:\n{exc}")
 
 
 def _pythonw_path() -> str:
