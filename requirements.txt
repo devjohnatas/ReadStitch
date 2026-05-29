@@ -6,3 +6,6 @@ pyqtdarktheme
 psd-tools
 pyinstaller
 backports.tarfile
+beautifulsoup4
+playwright
+playwright-stealth
