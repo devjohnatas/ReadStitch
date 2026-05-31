@@ -1063,7 +1063,10 @@ def _check_for_updates(*, silent_if_latest: bool = False, auto_update: bool = Fa
 
     if _version_tuple(latest_tag) > _version_tuple(APP_VERSION):
         if auto_update and _is_frozen():
-            _self_update_from_release(latest_release)
+            success, msg = _self_update_from_release(latest_release)
+            if success:
+                QApplication.quit()
+                sys.exit(0)
             return
 
         reply = QMessageBox.question(
@@ -1078,6 +1081,9 @@ def _check_for_updates(*, silent_if_latest: bool = False, auto_update: bool = Fa
                 success, msg = _self_update_from_release(latest_release)
                 if not success:
                     QMessageBox.warning(_main_window, "Aviso", msg)
+                else:
+                    QApplication.quit()
+                    sys.exit(0)
             else:
                 try:
                     webbrowser.open(latest_url, new=2)
