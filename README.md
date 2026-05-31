@@ -4,7 +4,7 @@
   </a>
 
   <h1>ReadStitch</h1>
-  <p><strong>Stitch e Upscaling para Webtoons e Mangás</strong><br/>Baixe capítulos, processe imagens e melhore a qualidade de leitura.</p>
+  <p><strong>A fusão entre SmartStitch e Waifu2x para Webtoons, Manhwas e Manhuas</strong><br/>Baixe raws, una imagens, corte capítulos e melhore a qualidade com upscaling — tudo em um só lugar.</p>
 
   <p>
     <a href="https://github.com/devjohnatas/ReadStitch/releases/latest"><img src="https://img.shields.io/github/v/release/devjohnatas/ReadStitch?label=release" alt="Latest Release"></a>
@@ -19,20 +19,51 @@
 
 ## O que é o ReadStitch?
 
-O ReadStitch é uma ferramenta desenvolvida a partir da integração entre os projetos SmartStitch e Waifu2X. O objetivo principal é fornecer uma pipeline automatizada para edição e leitura de webtoons e mangás.
+O **ReadStitch** é um projeto que nasceu da fusão de dois poderosos projetos open-source:
 
-Com a ferramenta, é possível baixar capítulos de diversas fontes online, ler diretamente os arquivos originais ou processá-los com as seguintes funcionalidades:
-- **Juntar e Fatiar (Stitch + Slice):** Imagens menores são combinadas e posteriormente fatiadas em dimensões ideais para leitura, evitando cortes no meio de painéis ou de caixas de texto.
-- **Upscaling de Imagem:** Integração nativa com o Waifu2X para remoção de artefatos visuais e aumento de resolução.
+- 🧵 **[SmartStitch](https://github.com/MechTechnology/SmartStitch)** — ferramenta inteligente para unir e cortar imagens de webtoons e manhwas com detecção avançada de pixels.
+- 🖼️ **[Waifu2x-Extension-GUI](https://github.com/AaronFeng753/Waifu2x-Extension-GUI)** — software de upscaling de imagens com remoção de artefatos visuais e aumento de resolução via IA.
 
-### Principais Funcionalidades
+Combinando o melhor dos dois mundos, o ReadStitch entrega uma pipeline completa para quem consome ou trabalha com **webtoons, manhwas e manhuas**: desde o download das raws até o processamento e corte das imagens para leitura.
 
-- **Processamento em Lote:** Suporte para o processamento automático de múltiplas pastas simultaneamente.
-- **Detecção Avançada:** Algoritmos de comparação de pixels para cortes inteligentes que não prejudicam a leitura.
-- **Múltiplos Formatos:** Suporte completo para entrada e saída em formatos como `.png`, `.jpg`, `.webp`, `.bmp`, `.psd`, `.tiff` e `.tga`.
-- **Marcas d'água:** Inserção configurável de overlay, cabeçalhos e rodapés automáticos nas imagens processadas.
-- **Integração com o Sistema:** Opção de adicionar o ReadStitch diretamente ao menu de contexto do Windows.
-- **Atualização Automática:** Sincronização direta com o repositório Git ou via pacotes de release para manter a ferramenta sempre atualizada.
+---
+
+## ✨ Funcionalidades
+
+### 📥 Download de Raws
+Baixe capítulos diretamente dos principais sites de leitura:
+
+| Site | Suporte |
+|---|---|
+| [Asura Scans](https://asuracomic.net) | ✅ |
+| [Kakao Webtoon](https://webtoon.kakao.com) | ✅ |
+| [Naver Webtoon](https://comic.naver.com) | ✅ |
+| [Webtoon (LINE)](https://www.webtoons.com) | ✅ |
+| [QisManga](https://qismanga.com) | ✅ |
+| [Comix](https://comix.jp) | ✅ |
+| [Vortex Scans](https://vortexscans.org) | ✅ |
+| [Piccoma](https://piccoma.com) | ✅ |
+
+> 💡 **Quer pedir suporte para um novo site?** [Abra uma Issue](https://github.com/devjohnatas/ReadStitch/issues) descrevendo o site e ela será avaliada!
+
+### 🧵 Unir e Cortar (Stitch + Slice)
+Baseado no **SmartStitch**, o ReadStitch une imagens menores em uma tira longa e depois as fatia em dimensões ideais para leitura — evitando cortes no meio de painéis ou caixas de texto.
+
+- **Detecção Avançada:** Algoritmos de comparação de pixels para cortes inteligentes.
+- **Processamento em Lote:** Múltiplas pastas processadas simultaneamente.
+- **Múltiplos Formatos:** `.png`, `.jpg`, `.webp`, `.bmp`, `.psd`, `.tiff` e `.tga`.
+
+### 🖼️ Upscaling com Waifu2x
+Baseado no **Waifu2x-Extension-GUI**, o ReadStitch aplica upscaling de imagens com inteligência artificial:
+
+- Remoção de artefatos de compressão.
+- Aumento de resolução sem perda de nitidez.
+- Suporte a múltiplos modelos de IA.
+
+### ⚙️ Outras Funcionalidades
+- **Marcas d'água:** Inserção de overlay, cabeçalhos e rodapés automáticos.
+- **Integração com o Windows:** Adicione o ReadStitch ao menu de contexto do Explorer.
+- **Atualização Automática:** Sincronização com o repositório Git ou via releases.
 
 ---
 
@@ -41,9 +72,8 @@ Com a ferramenta, é possível baixar capítulos de diversas fontes online, ler 
 ### Interface Gráfica (Releases)
 1. Acesse a seção de [Releases](https://github.com/devjohnatas/ReadStitch/releases) e faça o download da versão mais recente.
 2. Descompacte o arquivo e inicie o executável `ReadStitch.exe`.
-3. Selecione o diretório contendo as imagens dos capítulos.
-4. Configure as preferências de saída (como tamanho e formato) e marque a opção do Waifu2X caso deseje upscaling.
-5. Inicie o processamento.
+3. Use a aba de **Download** para baixar raws de um site suportado.
+4. Use a aba de **Processamento** para unir, cortar e aplicar upscaling nos capítulos.
 
 ### Rodando via Código-fonte
 1. Instale o Python 3.11 ou superior.
@@ -57,7 +87,7 @@ Com a ferramenta, é possível baixar capítulos de diversas fontes online, ler 
    ```bash
    # Interface gráfica
    python ReadStitchGUI.py
-   
+
    # Modo console
    python ReadStitchConsole.py -i "./chapter" -sh 7500 -t .png
    ```
@@ -82,10 +112,21 @@ python ReadStitchConsole.py [-h] -i INPUT_FOLDER -sh SPLIT_HEIGHT
 
 ## Como Contribuir
 
-O ReadStitch é um projeto de código aberto. Toda contribuição é válida e ajuda a melhorar o projeto.
-- **Relatar Problemas (Issues):** Caso encontre falhas, crie uma Issue descrevendo o problema, incluindo os passos de reprodução e anexando os registros da pasta `__logs__`.
-- **Melhorias e Sugestões:** Sugestões para novas funcionalidades ou ajustes no código atual são sempre bem-vindas no painel de Issues.
-- **Pull Requests (PR):** Contribuições diretas no código podem ser feitas através de Pull Requests na ramificação principal.
+O ReadStitch é um projeto de código aberto. Toda contribuição é bem-vinda!
+
+- 🐛 **Relatar Problemas:** Crie uma [Issue](https://github.com/devjohnatas/ReadStitch/issues) descrevendo o problema, incluindo os passos de reprodução e os logs da pasta `__logs__`.
+- 🌐 **Pedir Novo Site:** Quer que um site específico seja suportado no downloader? [Abra uma Issue](https://github.com/devjohnatas/ReadStitch/issues) com o nome e URL do site.
+- 💡 **Sugestões:** Novas funcionalidades e melhorias são sempre bem-vindas no painel de Issues.
+- 🔧 **Pull Requests:** Contribuições diretas no código podem ser feitas via Pull Request na branch principal.
+
+---
+
+## Créditos
+
+Este projeto é construído sobre o trabalho incrível de:
+
+- **[SmartStitch](https://github.com/MechTechnology/SmartStitch)** by MechTechnology
+- **[Waifu2x-Extension-GUI](https://github.com/AaronFeng753/Waifu2x-Extension-GUI)** by AaronFeng753
 
 ---
 
