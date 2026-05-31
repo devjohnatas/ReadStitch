@@ -6,6 +6,7 @@ from core.scrapers import get_scraper_for_url
 class FetchThread(QThread):
     finished = Signal(dict)
     error = Signal(str)
+    progress = Signal(str)
 
     def __init__(self, url):
         super().__init__()
@@ -14,7 +15,13 @@ class FetchThread(QThread):
 
     def run(self):
         try:
-            groups = self.scraper.get_chapter_groups(self.url)
+            # Passa o callback se o scraper suportar (args default)
+            import inspect
+            sig = inspect.signature(self.scraper.get_chapter_groups)
+            if 'progress_callback' in sig.parameters:
+                groups = self.scraper.get_chapter_groups(self.url, progress_callback=self.progress.emit)
+            else:
+                groups = self.scraper.get_chapter_groups(self.url)
             self.finished.emit(groups)
         except Exception as e:
             self.error.emit(str(e))
@@ -22,7 +29,7 @@ class FetchThread(QThread):
 class DownloadThread(QThread):
     progress = Signal(int, int) # current, total
     log = Signal(str)
-    success = Signal()
+    success = Signal(str)
     error = Signal(str)
 
     def __init__(self, chapters, output_dir, series_name, url):
@@ -35,21 +42,44 @@ class DownloadThread(QThread):
     def run(self):
         try:
             total = len(self.chapters)
-            series_path = os.path.join(self.output_dir, self.series_name)
+            if total == 1:
+                base_path = self.output_dir
+            else:
+                base_path = os.path.join(self.output_dir, self.series_name)
             
+            last_chap_name = ""
             for i, chap_url in enumerate(self.chapters):
-                # Extract chapter slug/name from url
-                chap_name = [p for p in chap_url.split('/') if p][-1]
+                import re
+                
+                # Tentar extrair o número do capítulo usando a url completa
+                match = re.search(r'(?:chapter|capitulo|cap|ch|episode|ep)(?:_no)?(?:[-_=/\s]*)(\d+(?:\.\d+)?)', str(chap_url), re.IGNORECASE)
+                if match:
+                    raw_chap_name = f"Capitulo {match.group(1)}"
+                else:
+                    clean_chap_url = str(chap_url).split('?')[0].strip('/')
+                    chap_parts = [p for p in clean_chap_url.split('/') if p]
+                    if chap_parts and chap_parts[-1] in ('list', 'viewer') and len(chap_parts) > 1:
+                        raw_chap_name = chap_parts[-2]
+                    else:
+                        raw_chap_name = chap_parts[-1] if chap_parts else f"Capitulo_{i+1}"
+                
+                chap_name = re.sub(r'[\\/:*?"<>|]', '_', raw_chap_name)
+                last_chap_name = chap_name
                 self.log.emit(f"Baixando {chap_name}...")
                 
-                count = self.scraper.download_chapter(chap_url, series_path, chap_name)
+                count = self.scraper.download_chapter(chap_url, base_path, chap_name)
                 if count == 0:
                     raise Exception(f"Nenhuma imagem encontrada ou erro ao baixar {chap_name}.")
                 
                 self.log.emit(f"✓ {chap_name}: {count} imagens salvas.")
                 self.progress.emit(i + 1, total)
                 
-            self.success.emit()
+            if total == 1:
+                final_path = os.path.join(self.output_dir, last_chap_name)
+            else:
+                final_path = base_path
+                
+            self.success.emit(final_path)
         except Exception as e:
             self.error.emit(str(e))
 
@@ -121,6 +151,7 @@ class DownloaderController(QObject):
         self.fetch_thread = FetchThread(url)
         self.fetch_thread.finished.connect(self.on_fetch_success)
         self.fetch_thread.error.connect(self.on_fetch_error)
+        self.fetch_thread.progress.connect(lambda msg: self.dlStatusLabel.setText(msg))
         self.fetch_thread.start()
 
     def on_fetch_success(self, groups_dict):
@@ -154,12 +185,13 @@ class DownloaderController(QObject):
         import re
         def format_chapter_name(url):
             url_str = str(url).rstrip('/')
-            basename = url_str.split('/')[-1]
             
-            # Tentar extrair o número de formatações comuns (ex: chapter-11, capitulo-2.5, ch-3)
-            match = re.search(r'(?:chapter|capitulo|cap|ch)[-_\s]*(\d+(?:\.\d+)?)', basename, re.IGNORECASE)
+            # Tentar extrair o número do capítulo a partir de formatações na URL inteira
+            match = re.search(r'(?:chapter|capitulo|cap|ch|episode|ep)(?:_no)?(?:[-_=/\s]*)(\d+(?:\.\d+)?)', url_str, re.IGNORECASE)
             if match:
                 return f"Capítulo {match.group(1)}"
+                
+            basename = url_str.split('?')[0].split('/')[-1]
                 
             # Se a string inteira for só um número
             match = re.search(r'^(\d+(?:\.\d+)?)$', basename)
@@ -194,12 +226,25 @@ class DownloaderController(QObject):
             return
 
         url = self.w.dlUrlField.text().strip()
-        parts = [p for p in url.split('/') if p]
+        clean_url = url.split('?')[0].strip('/')
+        parts = [p for p in clean_url.split('/') if p]
+        
         if "chapter" in parts:
             idx = parts.index("chapter")
             series_name = parts[idx - 1] if idx > 0 else parts[-1]
+        elif parts and parts[-1] in ('list', 'viewer') and len(parts) > 1:
+            series_name = parts[-2]
         else:
-            series_name = parts[-1]
+            series_name = parts[-1] if parts else "Download"
+            
+        import re
+        # Remove sufixos hexadecimais como -7b57f74d
+        series_name = re.sub(r'-[a-f0-9]{8,12}$', '', series_name)
+        # Troca hífens e underscores por espaços
+        series_name = series_name.replace('-', ' ').replace('_', ' ')
+        # Coloca as primeiras letras maiúsculas
+        series_name = series_name.title()
+        series_name = re.sub(r'[\\/:*?"<>|]', '_', series_name)
 
         self.w.dlDownloadButton.setEnabled(False)
         self.w.dlDownloadButton.setText("Baixando...")
@@ -213,7 +258,7 @@ class DownloaderController(QObject):
         self.download_thread = DownloadThread(selected, out_dir, series_name, url)
         self.download_thread.progress.connect(self.on_dl_progress)
         self.download_thread.log.connect(self.on_dl_log)
-        self.download_thread.success.connect(lambda: self.on_dl_success(out_dir, series_name))
+        self.download_thread.success.connect(self.on_dl_success)
         self.download_thread.error.connect(self.on_dl_error)
         self.download_thread.start()
 
@@ -223,14 +268,13 @@ class DownloaderController(QObject):
     def on_dl_log(self, msg):
         self.dlStatusLabel.setText(msg)
 
-    def on_dl_success(self, out_dir, series_name):
+    def on_dl_success(self, final_path):
         self.w.dlDownloadButton.setEnabled(True)
         self.w.dlDownloadButton.setText("Baixar Capítulos Selecionados")
         self.dlStatusLabel.setText("Download concluído!")
         
         if self.dlAutoProcessCheckbox.isChecked():
-            series_path = os.path.join(out_dir, series_name)
-            self.w.inputField.setText(series_path)
+            self.w.inputField.setText(final_path)
             # Make sure parallel processing is enabled to process all downloaded chapters
             self.w.parallelProcessingCheckbox.setChecked(True)
             self.s.save("parallel_processing", True)
@@ -250,13 +294,4 @@ def setup_downloader_tab(main_window, settings):
     # Store reference so it's not garbage collected
     main_window._downloader_controller = DownloaderController(main_window, settings)
     
-    # Hide ActionGroupBox when in Downloader tab
-    def on_tab_changed(index):
-        current_widget = main_window.mainTabWidget.widget(index)
-        if current_widget and current_widget.objectName() == "downloaderTab":
-            main_window.ActionGroupBox.setVisible(False)
-        else:
-            main_window.ActionGroupBox.setVisible(True)
-
-    main_window.mainTabWidget.currentChanged.connect(on_tab_changed)
-    on_tab_changed(main_window.mainTabWidget.currentIndex())
+    # Tab changed logic moved to controller.py

@@ -392,9 +392,25 @@ def _toggle_footer_options(enabled: bool) -> None:
 def _on_load() -> None:
     _main_window.statusField.setText("Aguardando...")
     _main_window.statusProgressBar.setValue(0)
+
+    # Add logic to hide ActionGroupBox depending on tab
+    def on_tab_changed(index):
+        # Hide ActionGroupBox (Status Atual) when on post-processing (1) or downloader (3)
+        if index in (1, 3):
+            _main_window.ActionGroupBox.hide()
+        else:
+            _main_window.ActionGroupBox.show()
+            
+    _main_window.mainTabWidget.currentChanged.connect(on_tab_changed)
+    
+    # Initialize the correct state for the current tab
+    on_tab_changed(_main_window.mainTabWidget.currentIndex())
+    
     _main_window.heightField.setValue(_settings.load("split_height"))
     _main_window.runProcessCheckbox.setChecked(_settings.load("run_postprocess"))
     _main_window.runComicZipCheckbox.setChecked(_settings.load("run_comiczip"))
+    _main_window.piccomaEmailInput.setText(_settings.load("piccoma_email"))
+    _main_window.piccomaPassInput.setText(_settings.load("piccoma_password"))
     _main_window.parallelProcessingCheckbox.setChecked(
         _settings.load("parallel_processing")
     )
@@ -435,6 +451,12 @@ def _bind_signals() -> None:
     )
     w.runComicZipCheckbox.stateChanged.connect(
         lambda: _settings.save("run_comiczip", w.runComicZipCheckbox.isChecked())
+    )
+    w.piccomaEmailInput.textChanged.connect(
+        lambda text: _settings.save("piccoma_email", text)
+    )
+    w.piccomaPassInput.textChanged.connect(
+        lambda text: _settings.save("piccoma_password", text)
     )
     w.parallelProcessingCheckbox.stateChanged.connect(
         lambda: _settings.save("parallel_processing", w.parallelProcessingCheckbox.isChecked())
@@ -618,8 +640,13 @@ def _waifu2x_action(*, repair: bool) -> None:
 def _install_playwright_action() -> None:
     QMessageBox.information(_main_window, "Playwright", "O download do navegador interno pode demorar alguns minutos. A interface vai travar durante o processo.\nPor favor, aguarde o aviso de conclusão!")
     try:
+        from playwright._impl._driver import compute_driver_executable, get_driver_env
+        driver = compute_driver_executable()
+        cmd = list(driver) if isinstance(driver, tuple) else [driver]
+        cmd.extend(["install", "chromium"])
         subprocess.check_call(
-            [sys.executable, "-m", "playwright", "install", "chromium"],
+            cmd,
+            env=get_driver_env(),
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
         )
         QMessageBox.information(_main_window, "Playwright", "Dependências do baixador instaladas com sucesso!")

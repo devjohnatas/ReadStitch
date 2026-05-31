@@ -9,3 +9,4 @@ backports.tarfile
 beautifulsoup4
 playwright
 playwright-stealth
+image-scramble

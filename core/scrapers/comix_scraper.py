@@ -14,10 +14,10 @@ class ComixScraper(BaseScraper):
     def name(self) -> str:
         return "Comix.to"
         
-    def _fetch_rendered_with_playwright(self, url: str) -> tuple[str, dict]:
-        # Retorna (html, groups_dict)
+    def _fetch_rendered_with_playwright(self, url: str) -> dict:
         from playwright.sync_api import sync_playwright
         from playwright_stealth import Stealth
+        import re
         
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -27,14 +27,39 @@ class ComixScraper(BaseScraper):
             page = context.new_page()
             Stealth().apply_stealth_sync(page)
             
-            # Truque inspirado no Tachiyomi: forçar a API a retornar 100 capítulos de vez
-            # ao invés de 20, para acelerar drasticamente a paginação!
+            # Intercept API requests
+            api_chapters = []
+            
+            def handle_response(response):
+                if '/chapters' in response.url and 'api/v1' in response.url:
+                    try:
+                        data = response.json()
+                        items = data.get('result', {}).get('items', [])
+                        if isinstance(items, list):
+                            for item in items:
+                                url_path = item.get('url', '')
+                                num = item.get('number', 0)
+                                title = item.get('title', '')
+                                
+                                group = item.get('group', {})
+                                group_name = group.get('name', 'Padrão') if isinstance(group, dict) else 'Padrão'
+                                
+                                if url_path:
+                                    full_link = f"https://comix.to/{url_path.lstrip('/')}"
+                                    api_chapters.append({
+                                        'num': float(num) if num else 0.0,
+                                        'url': full_link,
+                                        'group': group_name
+                                    })
+                    except Exception:
+                        pass
+            page.on('response', handle_response)
+            
             def handle_route(route):
-                url = route.request.url
-                if '/chapters' in url and 'limit=' in url:
-                    import re
-                    url = re.sub(r'limit=\d+', 'limit=100', url)
-                    route.continue_(url=url)
+                req_url = route.request.url
+                if '/chapters' in req_url and 'limit=' in req_url:
+                    req_url = re.sub(r'limit=\d+', 'limit=100', req_url)
+                    route.continue_(url=req_url)
                 else:
                     route.continue_()
             page.route("**/*", handle_route)
@@ -48,114 +73,75 @@ class ComixScraper(BaseScraper):
                     break
                 page.mouse.move(150 + i*10, 150 + i*10)
                 time.sleep(2)
-            # Esperar capítulos
-            try:
-                page.wait_for_selector('.mchap-item, .mchap-row, .chapter-list, a[href*="chapter-"]', timeout=20000)
-            except Exception:
-                pass
-            # Scroll dinâmico para carregar TODOS os capítulos
-            previous_height = page.evaluate("document.body.scrollHeight")
-            for _ in range(40):
-                page.evaluate("window.scrollBy(0, 2000)")
-                time.sleep(1.5)
-                current_height = page.evaluate("document.body.scrollHeight")
-                if current_height == previous_height:
-                    # Tentar mais uma vez com scroll para cima e para baixo para forçar
-                    page.evaluate("window.scrollBy(0, -500)")
-                    time.sleep(0.5)
-                    page.evaluate("window.scrollBy(0, 1000)")
-                    time.sleep(1)
-                    current_height = page.evaluate("document.body.scrollHeight")
-                    if current_height == previous_height:
-                        break # Realmente chegou no fim
-                previous_height = current_height
-                
-            html = page.content()
             
-            # Extrair JSON de grupos
-            groups_data = []
-            try:
-                groups_data = page.evaluate('''() => {
-                    const s = Array.from(document.querySelectorAll('script')).find(s => s.textContent && s.textContent.includes('groups'));
-                    if (s) {
-                        try {
-                            const data = JSON.parse(s.textContent);
-                            const key = Object.keys(data.queries).find(k => k.includes('"groups"'));
-                            if (key) return data.queries[key];
-                        } catch(e){}
-                    }
-                    return [];
-                }''')
-            except Exception:
-                pass
-                
-                
-            # Loop pelas páginas de paginação
-            groups_dict = {}
+            # Fallback to HTML if API failed
+            api_chapters = []
             page_count = 1
             
             while True:
                 print(f"Lendo página {page_count} dos capítulos...")
                 html = page.content()
-                
-                # Extrair JSON de grupos e capítulos usando BS4
                 soup = BeautifulSoup(html, 'html.parser')
-                
-                # mchap-item pode ser li ou div
                 items = soup.find_all(class_=re.compile('mchap-item|mchap-row'))
                 
-                if items:
-                    for item in items:
-                        link_tag = item.find('a', class_=re.compile('primary|chapter'))
-                        # Fallback if no primary class but has chapter link
-                        if not link_tag:
-                            links = item.find_all('a', href=re.compile('chapter-'))
-                            if links: link_tag = links[0]
+                for item in items:
+                    link_tag = item.find('a', class_=re.compile('primary|chapter'))
+                    if not link_tag:
+                        links = item.find_all('a', href=re.compile('chapter-'))
+                        if links: link_tag = links[0]
+                        
+                    if link_tag and link_tag.get('href') and 'chapter-' in link_tag.get('href'):
+                        href = link_tag['href']
+                        full_link = f"https://comix.to{href}" if href.startswith('/') else href
+                        group_tag = item.find('a', class_=re.compile('group'))
+                        group_name = group_tag.get_text(strip=True) if group_tag else "Padrão"
+                        
+                        # Use a very basic number extraction for sorting
+                        num = 0.0
+                        num_match = re.search(r'chapter-(\d+(?:\.\d+)?)', href)
+                        if num_match:
+                            num = float(num_match.group(1))
                             
-                        if link_tag and link_tag.get('href') and 'chapter-' in link_tag.get('href'):
-                            href = link_tag['href']
-                            full_link = f"https://comix.to{href}" if href.startswith('/') else href
-                            
-                            group_tag = item.find('a', class_=re.compile('group'))
-                            group_name = group_tag.get_text(strip=True) if group_tag else "Padrão"
-                            
-                            if group_name not in groups_dict:
-                                groups_dict[group_name] = []
-                            if full_link not in groups_dict[group_name]:
-                                groups_dict[group_name].append(full_link)
-                
+                        api_chapters.append({
+                            'num': num,
+                            'url': full_link,
+                            'group': group_name
+                        })
+                        
                 # Procurar botão de próxima página
                 try:
-                    next_btn = page.query_selector('button[aria-label="Next page"]')
+                    next_btn = page.query_selector('button[aria-label*="Next"]')
                     if not next_btn or next_btn.is_disabled():
                         break
                     
                     next_btn.click(force=True)
-                    time.sleep(2) # Esperar o React renderizar a nova página
+                    time.sleep(1.5) # Esperar o React renderizar a nova página
                     page_count += 1
                 except Exception as e:
-                    print("Erro ao tentar ir para a próxima página:", e)
                     break
-            
-            if not groups_dict:
-                # Fallback genérico apenas na primeira página se não encontrou nada estruturado
-                for a in soup.find_all('a'):
-                    href = a.get('href', '')
-                    if 'chapter-' in href:
-                        full_link = f"https://comix.to{href}" if href.startswith('/') else href
-                        if "Padrão" not in groups_dict:
-                            groups_dict["Padrão"] = []
-                        if full_link not in groups_dict["Padrão"]:
-                            groups_dict["Padrão"].append(full_link)
-                            
+                    
             browser.close()
-            return html, groups_dict
+            
+            # Remove duplicates by URL but keep highest number/cleanest data
+            # Sort by chapter number ascending
+            api_chapters.sort(key=lambda x: x['num'])
+            
+            groups_dict = {}
+            seen_urls = set()
+            for chap in api_chapters:
+                u = chap['url']
+                if u in seen_urls: continue
+                seen_urls.add(u)
+                
+                g = chap['group']
+                if g not in groups_dict:
+                    groups_dict[g] = []
+                groups_dict[g].append(u)
+                
+            return groups_dict
 
     def get_chapter_groups(self, series_url: str) -> dict[str, list[str]]:
-        html, groups_dict = self._fetch_rendered_with_playwright(series_url)
-        
-        # Limpar dicionário de grupos vazios
-        groups_dict = {k: list(set(v)) for k, v in groups_dict.items() if v}
+        groups_dict = self._fetch_rendered_with_playwright(series_url)
         
         if not groups_dict:
             raise Exception("Playwright não encontrou capítulos. O Cloudflare pode ter bloqueado ou a página não carregou.")
@@ -182,70 +168,28 @@ class ComixScraper(BaseScraper):
             page = context.new_page()
             Stealth().apply_stealth_sync(page)
             
-            # Interceptar a API JSON que retorna todas as imagens instantaneamente
-            api_images = []
-            def handle_response(response):
-                if '/api/v1/chapters/' in response.url:
-                    try:
-                        data = response.json()
-                        pages_data = data.get('result', {}).get('pages', {})
-                        if not pages_data:
-                            pages_data = data.get('chapter', {}).get('images', [])
-                            
-                        if isinstance(pages_data, dict):
-                            base_url = pages_data.get('baseUrl', '').rstrip('/')
-                            for item in pages_data.get('items', []):
-                                u = item.get('url', '')
-                                if u:
-                                    api_images.append(u if u.startswith('http') else f"{base_url}/{u.lstrip('/')}")
-                        elif isinstance(pages_data, list):
-                            for item in pages_data:
-                                u = item.get('url', '')
-                                if u:
-                                    api_images.append(u)
-                    except Exception:
-                        pass
-            page.on('response', handle_response)
+            # Inject script to intercept JSON.parse and capture the chapter images data
+            page.add_init_script("""
+                window.__interceptedImages = null;
+                const originalParse = JSON.parse;
+                JSON.parse = new Proxy(originalParse, {
+                    apply(target, thisArg, args) {
+                        const parsed = Reflect.apply(target, thisArg, args);
+                        try {
+                            if (parsed && parsed.result && parsed.result.pages) {
+                                window.__interceptedImages = parsed.result.pages;
+                            } else if (parsed && parsed.chapter && parsed.chapter.images) {
+                                window.__interceptedImages = parsed.chapter.images;
+                            }
+                        } catch (e) {}
+                        return parsed;
+                    }
+                });
+            """)
             
             page.goto(chapter_url, wait_until="domcontentloaded")
             
-            # Tentar extrair do HTML imediatamente (estratégia idêntica ao Tachiyomi)
-            try:
-                html = page.content()
-                import re, json
-                
-                # Procura por JSON.parse("...") ou JSON.parse('...') contendo os dados do capítulo
-                # Muitas vezes os sites Next.js/Nuxt.js injetam o estado assim
-                match = re.search(r'JSON\.parse\((["\'].*?["\'])\)', html)
-                if match:
-                    # Avaliar a string JS para obter o JSON real
-                    json_str = page.evaluate(f"() => {match.group(1)}")
-                    data = json.loads(json_str)
-                    
-                    pages_data = data.get('result', {}).get('pages', {})
-                    if not pages_data:
-                        # Tentar formato alternativo
-                        pages_data = data.get('chapter', {}).get('images', [])
-                        
-                    if isinstance(pages_data, dict):
-                        base_url = pages_data.get('baseUrl', '').rstrip('/')
-                        for item in pages_data.get('items', []):
-                            u = item.get('url', '')
-                            if u:
-                                api_images.append(u if u.startswith('http') else f"{base_url}/{u.lstrip('/')}")
-                    elif isinstance(pages_data, list):
-                        for item in pages_data:
-                            u = item.get('url', '')
-                            if u:
-                                api_images.append(u)
-                                
-                if api_images:
-                    browser.close()
-                    return api_images
-            except Exception as e:
-                print("Erro ao tentar extrair JSON embutido:", e)
-                
-            # Anti-Cloudflare
+            # Anti-Cloudflare simple bypass
             for i in range(10):
                 title = page.title()
                 if not ("Just a moment" in title or "Cloudflare" in title or "Attention Required" in title):
@@ -255,6 +199,33 @@ class ComixScraper(BaseScraper):
                 
             time.sleep(3)
             
+            api_images = []
+            
+            # Try to get the intercepted images from the browser JS context
+            try:
+                pages_data = page.evaluate("window.__interceptedImages")
+                
+                if pages_data:
+                    if isinstance(pages_data, dict):
+                        base_url = pages_data.get('baseUrl', '').rstrip('/')
+                        for item in pages_data.get('items', []):
+                            u = item.get('url', '')
+                            if u:
+                                full_url = u if u.startswith('http') else f"{base_url}/{u.lstrip('/')}"
+                                if item.get('s') == 1:
+                                    full_url += "#scrambled"
+                                api_images.append(full_url)
+                    elif isinstance(pages_data, list):
+                        for item in pages_data:
+                            u = item.get('url', '')
+                            if u:
+                                full_url = u
+                                if item.get('s') == 1:
+                                    full_url += "#scrambled"
+                                api_images.append(full_url)
+            except Exception as e:
+                print("Erro ao coletar window.__interceptedImages:", e)
+                
             if api_images:
                 browser.close()
                 return api_images
@@ -301,3 +272,81 @@ class ComixScraper(BaseScraper):
                     ordered.append(img)
                     
             return ordered
+
+    def download_image(self, url, output_path):
+        import urllib.request
+        from io import BytesIO
+        from PIL import Image
+        
+        is_scrambled = url.endswith("#scrambled")
+        clean_url = url.split("#")[0]
+        
+        req = urllib.request.Request(clean_url, headers=self.headers)
+        with urllib.request.urlopen(req) as response:
+            data = response.read()
+            seed = response.headers.get("x-scramble-seed")
+            
+            if is_scrambled and seed and int(seed) != 0:
+                self._descramble_and_save(data, int(seed), output_path)
+            else:
+                with open(output_path, 'wb') as f:
+                    f.write(data)
+
+    def _descramble_and_save(self, image_bytes, seed, output_path):
+        from PIL import Image
+        from io import BytesIO
+        
+        GRID_COLS = 5
+        GRID_ROWS = 5
+        NUM_TILES = GRID_COLS * GRID_ROWS
+        
+        # Linear Congruential Generator logic for building the order array
+        arr = list(range(NUM_TILES))
+        state = seed & 0xFFFFFFFF
+        for i in range(NUM_TILES - 1, 0, -1):
+            state = (state * 1664525 + 1013904223) & 0xFFFFFFFF
+            j = state % (i + 1)
+            arr[i], arr[j] = arr[j], arr[i]
+            
+        perm = arr
+        
+        # Load the scrambled image
+        with Image.open(BytesIO(image_bytes)) as img:
+            img = img.convert("RGBA")  # Ensure we have a workable color mode
+            width, height = img.size
+            tile_w = width // GRID_COLS
+            tile_h = height // GRID_ROWS
+            
+            output = Image.new("RGBA", (width, height))
+            
+            for src_idx in range(NUM_TILES):
+                dst_idx = perm[src_idx]
+                
+                src_col = src_idx % GRID_COLS
+                src_row = src_idx // GRID_COLS
+                dst_col = dst_idx % GRID_COLS
+                dst_row = dst_idx // GRID_COLS
+                
+                src_rect = (
+                    src_col * tile_w,
+                    src_row * tile_h,
+                    (src_col + 1) * tile_w,
+                    (src_row + 1) * tile_h,
+                )
+                
+                # Crop tile from source
+                tile = img.crop(src_rect)
+                
+                dst_x = dst_col * tile_w
+                dst_y = dst_row * tile_h
+                
+                # Paste tile to output
+                output.paste(tile, (dst_x, dst_y))
+                
+            # Convert back to RGB for JPEG saving
+            if output.mode == "RGBA":
+                bg = Image.new("RGB", output.size, (255, 255, 255))
+                bg.paste(output, mask=output.split()[3]) # 3 is the alpha channel
+                output = bg
+                
+            output.save(output_path, format="JPEG", quality=90)

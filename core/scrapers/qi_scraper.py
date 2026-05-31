@@ -3,30 +3,86 @@ import urllib.request
 import urllib.parse
 import json
 import re
+import time
 from .base_scraper import BaseScraper
 
 class QiScraper(BaseScraper):
     def __init__(self):
         super().__init__()
-        self.api_key = "9ab8d5b78e614906ae5a6d869acb833a1a00021819d"
         
     @property
     def name(self) -> str:
         return "Qimanhwa"
         
-    def _fetch_via_proxy(self, url: str, render=True) -> str:
-        target = urllib.parse.quote(url)
-        render_param = "&render=true" if render else ""
-        proxy_url = f"http://api.scrape.do?token={self.api_key}&url={target}{render_param}"
-        req = urllib.request.Request(proxy_url, headers=self.headers)
-        with urllib.request.urlopen(req) as response:
-            return response.read().decode('utf-8')
+    def _fetch_rendered_with_playwright(self, url: str, wait_for_selector: str = None) -> str:
+        from playwright.sync_api import sync_playwright
+        from playwright_stealth import Stealth
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/131.0.0.0"
+            )
+            page = context.new_page()
+            Stealth().apply_stealth_sync(page)
+            
+            page.goto(url, wait_until="domcontentloaded")
+            
+            # Anti-Cloudflare simple bypass
+            for i in range(10):
+                title = page.title()
+                if not title or ("Just a moment" in title or "Cloudflare" in title or "Attention Required" in title):
+                    page.mouse.move(150 + i*10, 150 + i*10)
+                    time.sleep(2)
+                else:
+                    break
+                    
+            if wait_for_selector:
+                try:
+                    page.wait_for_selector(wait_for_selector, timeout=15000)
+                except Exception:
+                    pass
+                    
+            html = page.content()
+            browser.close()
+            return html
+            
+    def _fetch_json_with_playwright(self, url: str) -> dict:
+        from playwright.sync_api import sync_playwright
+        from playwright_stealth import Stealth
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/131.0.0.0"
+            )
+            page = context.new_page()
+            Stealth().apply_stealth_sync(page)
+            
+            page.goto(url, wait_until="domcontentloaded")
+            
+            # Anti-Cloudflare simple bypass
+            for i in range(10):
+                content = page.content()
+                if "Just a moment" in content or "Cloudflare" in content:
+                    page.mouse.move(150 + i*10, 150 + i*10)
+                    time.sleep(2)
+                else:
+                    break
+                    
+            text = page.locator("body").inner_text()
+            browser.close()
+            
+            try:
+                return json.loads(text)
+            except Exception as e:
+                raise Exception(f"Failed to parse JSON API: {e}")
             
     def get_chapters(self, series_url: str) -> list[str]:
         if "/chapter" in series_url:
             return [series_url]
             
-        html = self._fetch_via_proxy(series_url)
+        html = self._fetch_rendered_with_playwright(series_url)
         
         slug = [p for p in series_url.split('/') if p][-1]
         pattern = r'href=[\'\"](/series/' + re.escape(slug) + r'/chapter-[0-9]+)[\'\"]'
@@ -60,8 +116,7 @@ class QiScraper(BaseScraper):
         
         api_url = f"https://api.qimanhwa.com/api/v1/series/{series_slug}/chapters/{chapter_slug}"
         
-        json_str = self._fetch_via_proxy(api_url, render=False)
-        data = json.loads(json_str)
+        data = self._fetch_json_with_playwright(api_url)
         
         if data.get('requiresPurchase', False) and not data.get('images'):
             raise Exception(f"O capítulo {chapter_slug} é pago e está bloqueado.")
@@ -74,8 +129,6 @@ class QiScraper(BaseScraper):
         for img_obj in images:
             img_url = img_obj.get('url')
             if img_url:
-                target_encoded = urllib.parse.quote(img_url)
-                proxy_url = f"http://api.scrape.do?token={self.api_key}&url={target_encoded}"
-                ordered.append(proxy_url)
+                ordered.append(img_url)
                 
         return ordered

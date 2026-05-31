@@ -177,21 +177,9 @@
       </widget>
       <widget class="QWidget" name="postProcessTab">
        <attribute name="title">
-        <string>Pós-processamento</string>
+        <string>Processar</string>
        </attribute>
        <layout class="QVBoxLayout" name="postProcessVerticalLayout">
-        <property name="leftMargin">
-         <number>6</number>
-        </property>
-        <property name="topMargin">
-         <number>6</number>
-        </property>
-        <property name="rightMargin">
-         <number>6</number>
-        </property>
-        <property name="bottomMargin">
-         <number>6</number>
-        </property>
         <item>
          <widget class="QGroupBox" name="downloaderDepsGroupBox">
           <property name="title">
@@ -226,6 +214,18 @@
           </layout>
          </widget>
         </item>
+        <property name="leftMargin">
+         <number>6</number>
+        </property>
+        <property name="topMargin">
+         <number>6</number>
+        </property>
+        <property name="rightMargin">
+         <number>6</number>
+        </property>
+        <property name="bottomMargin">
+         <number>6</number>
+        </property>
         <item>
          <widget class="QGroupBox" name="postProcessGroupBox">
           <property name="title">
@@ -747,7 +747,7 @@ Exemplo: Se a marca d'água tem 150px e este valor é 400px, só áreas uniforme
         <string>Baixador</string>
        </attribute>
        <layout class="QVBoxLayout" name="downloaderVerticalLayout">
-        <property name="leftMargin"><number>6</number></property>
+        <item><widget class="QGroupBox" name="piccomaLoginGroup"><property name="title"><string>Login Piccoma</string></property><layout class="QVBoxLayout" name="piccomaLoginLayout"><item><layout class="QHBoxLayout" name="emailLayout"><item><widget class="QLabel" name="emailLabel"><property name="text"><string>E-mail:</string></property></widget></item><item><widget class="QLineEdit" name="piccomaEmailInput" /></item></layout></item><item><layout class="QHBoxLayout" name="passLayout"><item><widget class="QLabel" name="passLabel"><property name="text"><string>Senha:</string></property></widget></item><item><widget class="QLineEdit" name="piccomaPassInput"><property name="echoMode"><enum>QLineEdit::Password</enum></property></widget></item></layout></item></layout></widget></item><property name="leftMargin"><number>6</number></property>
         <property name="topMargin"><number>6</number></property>
         <property name="rightMargin"><number>6</number></property>
         <property name="bottomMargin"><number>6</number></property>

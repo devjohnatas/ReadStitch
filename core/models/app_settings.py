@@ -32,6 +32,8 @@ class AppSettings:
     parallel_processing: bool = True
     last_browse_location: str = ""
     download_dir: str = "C:/Manhwa/Downloads"
+    piccoma_email: str = ""
+    piccoma_password: str = ""
 
     # Watermark Settings - Fullpage
     watermark_fullpage_enabled: bool = False
